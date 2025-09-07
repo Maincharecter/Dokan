@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>মুদি দোকানের হিসাব - বাংলা OCR</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+body { 
+    font-family: Arial, sans-serif; 
+    background: #f0f8ff; 
+    padding: 20px; 
+    text-align: center; 
+    margin: 0;
+}
+.container { 
+    max-width: 1000px; 
+    margin: auto; 
+    background: #fff; 
+    padding: 20px; 
+    border-radius: 10px; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+}
+table { 
+    width: 100%; 
+    margin-top: 20px; 
+    border-collapse: collapse; 
+    table-layout: fixed;
+}
+table, th, td { 
+    border: 1px solid #ddd; 
+    word-wrap: break-word;
+}
+th, td { 
+    padding: 10px; 
+    text-align: center; 
+}
+#loading, #stockLoading { 
+    margin-top: 10px; 
+    color: green; 
+    font-weight: bold; 
+    display: none; 
+}
+input, select { 
+    padding: 8px; 
+    margin: 5px; 
+    border: 1px solid #ddd; 
+    border-radius: 5px; 
+    width: 150px;
+}
+button { 
+    padding: 8px 12px; 
+    margin: 5px; 
+    border: none; 
+    background: #007bff; 
+    color: #fff; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    font-size: 14px; 
+}
+button:hover { 
+    background: #0056b3; 
+}
+.delete-btn { 
+    background: #dc3545; 
+}
+.delete-btn:hover { 
+    background: #a71d2a; 
+}
+.edit-btn { 
+    background: #ffc107; 
+    color: #000; 
+}
+.edit-btn:hover { 
+    background: #d39e00; 
+}
+.demo-section { 
+    margin: 20px 0; 
+    padding: 15px; 
+    background: #f0f8ff; 
+    border-radius: 8px; 
+}
+.demo-images { 
+    display: flex; 
+    justify-content: space-around; 
+    margin: 20px 0; 
+    flex-wrap: wrap; 
+}
+.demo-image { 
+    margin: 10px; 
+    text-align: center; 
+}
+.demo-image img { 
+    max-width: 300px; 
+    border: 1px solid #ddd; 
+    border-radius: 5px; 
+}
+.instructions { 
+    background: #fff3cd; 
+    padding: 15px; 
+    border-radius: 8px; 
+    margin: 20px 0; 
+    text-align: left; 
+}
+.alert {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    display: none;
+}
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+}
+.alert-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+.section {
+    margin: 25px 0;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+}
+@media (max-width: 768px) {
+    input, select {
+        width: 100%;
+        margin: 5px 0;
+    }
+    button {
+        width: 100%;
+        margin: 5px 0;
+    }
+    .demo-images {
+        flex-direction: column;
+    }
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>🛒 মুদি দোকানের হিসাব - বাংলা OCR</h2>
+
+<div class="alert" id="alertBox"></div>
+
+<div class="instructions">
+<h3>📋 ব্যবহার নির্দেশিকা:</h3>
+<ol>
+<li>ডেমো ছবি ডাউনলোড করুন বা আপনার নিজের ছবি ব্যবহার করুন।</li>
+<li>স্টক আপডেট করতে "স্টক ছবি আপলোড করুন" ব্যবহার করুন।</li>
+<li>বিক্রির রেকর্ড করতে "বিলের ছবি আপলোড করুন" ব্যবহার করুন।</li>
+<li>OCR স্বয়ংক্রিয়ভাবে ডেটা পড়বে এবং স্টক/বিক্রি হালনাগাদ করবে।</li>
+</ol>
+</div>
+
+<!-- Demo images -->
+<div class="demo-section">
+<h3>📷 ডেমো ছবিসমূহ</h3>
+<div class="demo-images">
+<div class="demo-image">
+<h4>ডেমো স্টক ছবি</h4>
+<img src="https://i.ibb.co/4T2y0c2/stock-demo.png" alt="স্টক ডেমো ছবি">
+<p><a href="https://i.ibb.co/4T2y0c2/stock-demo.png" download>⬇️ ডাউনলোড করুন</a></p>
+</div>
+<div class="demo-image">
+<h4>ডেমো বিল ছবি</h4>
+<img src="https://i.ibb.co/6RJ2M1C/bill-demo.png" alt="বিল ডেমো ছবি">
+<p><a href="https://i.ibb.co/6RJ2M1C/bill-demo.png" download>⬇️ ডাউনলোড করুন</a></p>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h3>📷 স্টক ছবি আপলোড করুন</h3>
+<input type="file" id="stockInput" accept="image/*"><br>
+<p id="stockLoading">স্টক প্রসেস করা হচ্ছে...</p>
+
+<h3>অথবা ম্যানুয়ালি স্টক যোগ করুন</h3>
+<div>
+    <input type="text" id="productName" placeholder="পণ্যের নাম">
+    <input type="number" id="productQty" placeholder="পরিমাণ" min="0" step="0.01">
+    <select id="unit">
+        <option value="kg">কেজি</option>
+        <option value="pcs">পিস</option>
+        <option value="pack">প্যাক</option>
+        <option value="liter">লিটার</option>
+        <option value="feet">ফুট</option>
+    </select>
+    <button onclick="addStock()">স্টক যোগ করুন</button>
+</div>
+</div>
+
+<div class="section">
+<h3>📦 বর্তমান স্টক</h3>
+<table id="inventoryTable">
+<thead>
+<tr>
+<th width="40%">পণ্য</th>
+<th width="30%">পরিমাণ</th>
+<th width="30%">অ্যাকশন</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<div class="section">
+<h3>📝 বিলের ছবি আপলোড করুন</h3>
+<input type="file" id="billInput" accept="image/*"><br>
+<p id="loading">প্রসেস করা হচ্ছে... অনুগ্রহ করে অপেক্ষা করুন</p>
+</div>
+
+<div class="section">
+<h3>🧾 বিক্রির হিসাব</h3>
+<button onclick="exportCSV()">⬇️ বিক্রির রিপোর্ট ডাউনলোড করুন</button>
+<table id="salesTable">
+<thead>
+<tr>
+<th width="25%">তারিখ</th>
+<th width="35%">পণ্য</th>
+<th width="25%">বিক্রি হয়েছে</th>
+<th width="15%">অ্যাকশন</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+
+<script>
+// Initialize data with proper error handling
+let inventory = {};
+let salesHistory = [];
+
+try {
+    const storedInventory = localStorage.getItem("inventory");
+    const storedSales = localStorage.getItem("salesHistory");
+    
+    inventory = storedInventory ? JSON.parse(storedInventory) : {};
+    salesHistory = storedSales ? JSON.parse(storedSales) : [];
+} catch (e) {
+    console.error("Error loading data from localStorage:", e);
+    showAlert("ডেটা লোড করতে সমস্যা হয়েছে। নতুন করে শুরু করা হচ্ছে।", "error");
+}
+
+const inventoryTable = document.querySelector("#inventoryTable tbody");
+const salesTable = document.querySelector("#salesTable tbody");
+const loading = document.getElementById("loading");
+const stockLoading = document.getElementById("stockLoading");
+const alertBox = document.getElementById("alertBox");
+
+// Show alert message
+function showAlert(message, type = "success") {
+    alertBox.textContent = message;
+    alertBox.className = `alert alert-${type}`;
+    alertBox.style.display = "block";
+    
+    setTimeout(() => {
+        alertBox.style.display = "none";
+    }, 5000);
+}
+
+// Convert Bengali digits to number
+function bnToNumber(bn) {
+    if (!bn) return NaN;
+    
+    const map = {
+        '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+        '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+    };
+    
+    const cleaned = bn.toString().replace(/[০-৯]/g, m => map[m] || m);
+    return parseFloat(cleaned.replace(/[^\d.]/g, ''));
+}
+
+// Normalize text from OCR
+function normalizeText(text) {
+    if (!text) return "";
+    
+    return text
+        .replace(/O/g, '0')
+        .replace(/l/g, '1')
+        .replace(/I/g, '1')
+        .replace(/[^\w\s\.\-০-৯অ-হক-র\s]/g, '')
+        .trim();
+}
+
+// Extract product information from text line
+function extractProductInfo(line) {
+    line = normalizeText(line);
+    
+    // Try to match patterns like "চাল ৫ কেজি" or "চাল 5 kg"
+    const patterns = [
+        /(.+?)\s+([\d.০-৯]+)\s*(কেজি|পিস|প্যাক|লিটার|ফুট|kg|pcs|pack|liter|feet)/i,
+        /(.+?)\s+([\d.০-৯]+)/i
+    ];
+    
+    for (const pattern of patterns) {
+        const match = line.match(pattern);
+        if (match) {
+            const name = match[1].trim();
+            const qty = bnToNumber(match[2]);
+            let unit = match[3] ? match[3].toLowerCase() : "pcs";
+            
+            // Map English units to Bengali
+            const unitMap = {
+                'kg': 'কেজি', 'pcs': 'পিস', 'pack': 'প্যাক', 
+                'liter': 'লিটার', 'feet': 'ফুট'
+            };
+            
+            unit = unitMap[unit] || unit;
+            
+            if (!isNaN(qty) && name && qty > 0) {
+                return { name, qty, unit };
+            }
+        }
+    }
+    
+    return null;
+}
+
+// Process image for stock or bill
+async function processImage(file, type) {
+    const loader = type === 'stock' ? stockLoading : loading;
+    loader.style.display = "block";
+    
+    try {
+        const { data: { text } } = await Tesseract.recognize(file, 'ben+eng');
+        loader.style.display = "none";
+        
+        const lines = text.split("\n").filter(l => l.trim());
+        const today = new Date().toLocaleString('bn-BD');
+        let processedCount = 0;
+        
+        for (const line of lines) {
+            const productInfo = extractProductInfo(line);
+            
+            if (productInfo) {
+                const { name, qty, unit } = productInfo;
+                
+                if (type === 'stock') {
+                    if (!inventory[name]) {
+                        inventory[name] = { qty: 0, unit: unit };
+                    }
+                    inventory[name].qty += qty;
+                    processedCount++;
+                } else {
+                    if (inventory[name]) {
+                        if (inventory[name].qty >= qty) {
+                            inventory[name].qty -= qty;
+                            salesHistory.push({
+                                date: today,
+                                product: name,
+                                quantity: qty,
+                                unit: inventory[name].unit
+                            });
+                            processedCount++;
+                        } else {
+                            showAlert(`⚠️ ${name} এর পর্যাপ্ত স্টক নেই। মাত্র ${inventory[name].qty} ${inventory[name].unit} আছে।`, "error");
+                        }
+                    } else {
+                        showAlert(`⚠️ ${name} পণ্যটি স্টকে নেই। প্রথমে স্টক যোগ করুন।`, "error");
+                    }
+                }
+            }
+        }
+        
+        if (processedCount > 0) {
+            renderInventory();
+            renderSales();
+            saveData();
+            showAlert(`✅ ${processedCount}টি পণ্য ${type === 'stock' ? 'স্টক' : 'বিক্রি'} যোগ করা হয়েছে!`);
+        } else {
+            showAlert("❌ কোনো পণ্য সনাক্ত করা যায়নি। দয়া করে আরও স্পষ্ট ছবি আপলোড করুন।", "error");
+        }
+    } catch (error) {
+        loader.style.display = "none";
+        showAlert("❌ প্রসেস করতে সমস্যা হয়েছে: " + error.message, "error");
+    }
+}
+
+// Event listeners for file inputs
+document.getElementById("stockInput").addEventListener("change", e => {
+    const file = e.target.files[0]; 
+    if (file) processImage(file, "stock");
+    e.target.value = ''; // Reset input
+});
+
+document.getElementById("billInput").addEventListener("change", e => {
+    const file = e.target.files[0]; 
+    if (file) processImage(file, "bill");
+    e.target.value = ''; // Reset input
+});
+
+function saveData() {
+    try {
+        localStorage.setItem("inventory", JSON.stringify(inventory));
+        localStorage.setItem("salesHistory", JSON.stringify(salesHistory));
+    } catch (e) {
+        console.error("Error saving data to localStorage:", e);
+        showAlert("ডেটা সেভ করতে সমস্যা হয়েছে।", "error");
+    }
+}
+
+function addStock() {
+    const name = document.getElementById("productName").value.trim();
+    const qty = parseFloat(document.getElementById("productQty").value);
+    const unit = document.getElementById("unit").value;
+    
+    if (name && !isNaN(qty) && qty > 0) {
+        if (!inventory[name]) {
+            inventory[name] = { qty: 0, unit: unit };
+        } else if (inventory[name].unit !== unit) {
+            showAlert(`⚠️ ইউনিট আগে থেকেই ভিন্ন! পূর্বের ইউনিট: ${inventory[name].unit}`, "error");
+            return;
+        }
+        
+        inventory[name].qty += qty;
+        renderInventory();
+        saveData();
+        
+        document.getElementById("productName").value = "";
+        document.getElementById("productQty").value = "";
+        
+        showAlert(`✅ ${qty} ${unit} ${name} স্টক যোগ করা হয়েছে!`);
+    } else {
+        showAlert("❌ সঠিক নাম ও পরিমাণ লিখুন", "error");
+    }
+}
+
+function editStock(product) {
+    const newQty = prompt(`${product} এর নতুন পরিমাণ লিখুন:`, inventory[product].qty);
+    if (newQty !== null && !isNaN(newQty) && newQty >= 0) {
+        inventory[product].qty = parseFloat(newQty);
+        renderInventory();
+        saveData();
+        showAlert(`✅ ${product} এর পরিমাণ আপডেট করা হয়েছে!`);
+    }
+}
+
+function deleteStock(product) {
+    if (confirm(`${product} স্টক থেকে মুছে ফেলবেন?`)) {
+        delete inventory[product];
+        renderInventory();
+        saveData();
+        showAlert(`✅ ${product} স্টক থেকে মুছে ফেলা হয়েছে!`);
+    }
+}
+
+function deleteSale(index) {
+    if (confirm("এই বিক্রির রেকর্ড মুছে ফেলবেন?")) {
+        const sale = salesHistory[index];
+        // Restore stock if needed
+        if (inventory[sale.product]) {
+            inventory[sale.product].qty += sale.quantity;
+        }
+        
+        salesHistory.splice(index, 1);
+        renderSales();
+        renderInventory();
+        saveData();
+        showAlert("✅ বিক্রির রেকর্ড মুছে ফেলা হয়েছে!");
+    }
+}
+
+function renderInventory() {
+    if (!inventoryTable) return;
+    
+    inventoryTable.innerHTML = "";
+    
+    if (Object.keys(inventory).length === 0) {
+        inventoryTable.innerHTML = `<tr><td colspan="3">কোনো স্টক নেই</td></tr>`;
+        return;
+    }
+    
+    for (const [name, data] of Object.entries(inventory)) {
+        inventoryTable.innerHTML += `
+            <tr>
+                <td>${name}</td>
+                <td>${data.qty} ${data.unit}</td>
+                <td>
+                    <button class="edit-btn" onclick="editStock('${name}')">এডিট</button>
+                    <button class="delete-btn" onclick="deleteStock('${name}')">ডিলিট</button>
+                </td>
+            </tr>`;
+    }
+}
+
+function renderSales() {
+    if (!salesTable) return;
+    
+    salesTable.innerHTML = "";
+    
+    if (salesHistory.length === 0) {
+        salesTable.innerHTML = `<tr><td colspan="4">কোনো বিক্রির রেকর্ড নেই</td></tr>`;
+        return;
+    }
+    
+    salesHistory.forEach((sale, index) => {
+        salesTable.innerHTML += `
+            <tr>
+                <td>${sale.date}</td>
+                <td>${sale.product}</td>
+                <td>${sale.quantity} ${sale.unit}</td>
+                <td>
+                    <button class="delete-btn" onclick="deleteSale(${index})">ডিলিট</button>
+                </td>
+            </tr>`;
+    });
+}
+
+function exportCSV() {
+    if (salesHistory.length === 0) {
+        showAlert("কোনো বিক্রির হিসাব নেই!", "error");
+        return;
+    }
+    
+    let csv = "data:text/csv;charset=utf-8,তারিখ,পণ্য,বিক্রি,ইউনিট\n";
+    salesHistory.forEach(sale => {
+        csv += `"${sale.date}","${sale.product}",${sale.quantity},${sale.unit}\n`;
+    });
+    
+    const encodedUri = encodeURI(csv);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "sales_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Initialize sample inventory if empty
+if (Object.keys(inventory).length === 0) {
+    inventory = {
+        "চাল": { qty: 50, unit: "কেজি" },
+        "ডাল": { qty: 30, unit: "কেজi" },
+        "আটা": { qty: 40, unit: "কেজি" },
+        "তেল": { qty: 20, unit: "লিটার" },
+        "সাবান": { qty: 50, unit: "পিস" }
+    };
+    saveData();
+}
+
+// Initial render
+renderInventory();
+renderSales();
+</script>
+</body>
+</html>
